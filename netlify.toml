@@ -1,0 +1,10 @@
+# Frontend estático no Netlify. A pasta "static" contém só o index.html.
+[build]
+  publish = "static"
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

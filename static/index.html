@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Baixar vídeos do Instagram</title>
+  <meta name="description" content="Cole o link de um Reel ou post do Instagram e baixe o vídeo em MP4." />
+  <!-- URL do backend. Vazio = mesmo servidor que serve esta página. Em produção (Netlify), coloque a URL do backend. -->
+  <meta name="api-base" content="" />
+  <style>
+    :root {
+      --bg: #f4f5f9;
+      --card: #ffffff;
+      --text: #1d1f27;
+      --muted: #6b7080;
+      --border: #e2e4ec;
+      --accent: #e1306c;
+      --accent-2: #833ab4;
+      --danger-bg: #fdecef;
+      --danger-text: #b3263e;
+      --radius: 18px;
+      --shadow: 0 10px 30px rgba(20, 20, 40, 0.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0f1116;
+        --card: #181b23;
+        --text: #eceef5;
+        --muted: #9aa0b4;
+        --border: #2a2e3a;
+        --danger-bg: #3a1820;
+        --danger-text: #ff8a9e;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0f1116;
+      --card: #181b23;
+      --text: #eceef5;
+      --muted: #9aa0b4;
+      --border: #2a2e3a;
+      --danger-bg: #3a1820;
+      --danger-text: #ff8a9e;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #f58529, var(--accent), var(--accent-2));
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.93rem;
+      margin: 4px 0 22px;
+      line-height: 1.45;
+    }
+
+    form {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="url"] {
+      flex: 1;
+      min-width: 0;
+      padding: 13px 14px;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    input[type="url"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(225, 48, 108, 0.18);
+    }
+
+    button.primary {
+      padding: 13px 18px;
+      border: 0;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, #f58529, var(--accent), var(--accent-2));
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity .15s, transform .05s;
+    }
+
+    button.primary:hover:not(:disabled) { opacity: .92; }
+    button.primary:active:not(:disabled) { transform: scale(.98); }
+    button.primary:disabled { opacity: .6; cursor: not-allowed; }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, .45);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      display: none;
+    }
+
+    .loading .spinner { display: inline-block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      font-size: 0.92rem;
+      line-height: 1.4;
+      display: none;
+    }
+
+    .error.show { display: block; }
+
+    .result {
+      margin-top: 22px;
+      display: none;
+    }
+
+    .result.show { display: block; animation: fade .3s ease; }
+
+    @keyframes fade {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .thumb-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      max-height: 420px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--border);
+      margin-bottom: 14px;
+    }
+
+    .thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .thumb-placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .duration {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      background: rgba(0, 0, 0, .65);
+      color: #fff;
+      font-size: 0.8rem;
+      padding: 3px 8px;
+      border-radius: 8px;
+    }
+
+    .title {
+      font-weight: 600;
+      font-size: 1rem;
+      margin: 0 0 14px;
+      word-break: break-word;
+      line-height: 1.4;
+    }
+
+    a.download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--text);
+      color: var(--card);
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+
+    a.download:hover { opacity: .9; }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 420px) {
+      .card { padding: 22px 18px; }
+      form { flex-direction: column; }
+      button.primary { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card" id="card">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true">IG</div>
+      <h1>Baixar vídeo do Instagram</h1>
+    </div>
+    <p class="subtitle">Cole o link de um Reel ou post com vídeo e baixe o arquivo em MP4.</p>
+
+    <form id="form" autocomplete="off">
+      <input
+        id="url"
+        type="url"
+        placeholder="https://www.instagram.com/reel/..."
+        required
+        aria-label="Link do Instagram"
+      />
+      <button class="primary" id="submit" type="submit">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="btn-label">Buscar</span>
+      </button>
+    </form>
+
+    <div class="error" id="error" role="alert"></div>
+
+    <section class="result" id="result" aria-live="polite">
+      <div class="thumb-wrap">
+        <div class="thumb-placeholder" id="thumb-placeholder">Sem miniatura</div>
+        <img id="thumb" alt="Miniatura do vídeo" referrerpolicy="no-referrer" hidden />
+        <span class="duration" id="duration" hidden></span>
+      </div>
+      <p class="title" id="title"></p>
+      <div class="error" id="audio-warning" role="status"></div>
+      <a class="download" id="download" href="#" download>
+        ⬇ Baixar MP4
+      </a>
+      <p class="hint">O download começa pelo servidor; pode levar alguns segundos.</p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const API_BASE = (document.querySelector('meta[name="api-base"]')?.content || "").replace(/\/$/, "");
+      const form = document.getElementById("form");
+      const input = document.getElementById("url");
+      const submit = document.getElementById("submit");
+      const btnLabel = document.getElementById("btn-label");
+      const errorBox = document.getElementById("error");
+      const result = document.getElementById("result");
+      const thumb = document.getElementById("thumb");
+      const thumbPlaceholder = document.getElementById("thumb-placeholder");
+      const durationEl = document.getElementById("duration");
+      const titleEl = document.getElementById("title");
+      const downloadLink = document.getElementById("download");
+
+      function setLoading(on) {
+        submit.disabled = on;
+        submit.parentElement.classList.toggle("loading", on);
+        btnLabel.textContent = on ? "Processando..." : "Buscar";
+      }
+
+      function showError(message) {
+        errorBox.textContent = message;
+        errorBox.classList.add("show");
+      }
+
+      function clearMessages() {
+        errorBox.classList.remove("show");
+        errorBox.textContent = "";
+      }
+
+      function formatDuration(seconds) {
+        if (typeof seconds !== "number" || !isFinite(seconds) || seconds <= 0) return null;
+        const total = Math.round(seconds);
+        const h = Math.floor(total / 3600);
+        const m = Math.floor((total % 3600) / 60);
+        const s = total % 60;
+        const pad = (n) => String(n).padStart(2, "0");
+        return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+      }
+
+      function extractErrorMessage(body, status) {
+        if (body && typeof body.detail === "string") return body.detail;
+        if (body && Array.isArray(body.detail) && body.detail.length) {
+          return body.detail.map((d) => d.msg).join("; ");
+        }
+        if (status === 0) return "Não foi possível conectar ao servidor.";
+        return `Erro inesperado (HTTP ${status}).`;
+      }
+
+      function showResult(data) {
+        titleEl.textContent = data.title || "Vídeo do Instagram";
+
+        if (data.thumbnail) {
+          thumb.hidden = false;
+          thumbPlaceholder.hidden = true;
+          thumb.onerror = () => {
+            thumb.hidden = true;
+            thumbPlaceholder.hidden = false;
+          };
+          thumb.src = data.thumbnail;
+        } else {
+          thumb.hidden = true;
+          thumbPlaceholder.hidden = false;
+        }
+
+        const dur = formatDuration(data.duration);
+        durationEl.hidden = !dur;
+        durationEl.textContent = dur || "";
+
+        const audioWarning = document.getElementById("audio-warning");
+        audioWarning.textContent = data.has_audio === false
+          ? "Atenção: o Instagram não ofereceu uma trilha de áudio para este vídeo. O arquivo será baixado sem som."
+          : "";
+        audioWarning.classList.toggle("show", data.has_audio === false);
+
+        // A rota de proxy força o download do arquivo (Content-Disposition: attachment).
+        let href = `${API_BASE}/api/download?url=${encodeURIComponent(data.download_url)}`;
+        if (data.audio_url) {
+          href += `&audio=${encodeURIComponent(data.audio_url)}`;
+        }
+        downloadLink.href = href;
+
+        result.classList.remove("show");
+        void result.offsetWidth; // reinicia a animação
+        result.classList.add("show");
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        clearMessages();
+        result.classList.remove("show");
+
+        const url = input.value.trim();
+        if (!url) {
+          showError("Cole um link do Instagram para continuar.");
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const response = await fetch(`${API_BASE}/api/info`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
+
+          let body = null;
+          try {
+            body = await response.json();
+          } catch (_) {
+            body = null;
+          }
+
+          if (!response.ok) {
+            showError(extractErrorMessage(body, response.status));
+            return;
+          }
+
+          showResult(body);
+        } catch (err) {
+          showError("Não foi possível conectar ao servidor. Verifique se ele está em execução.");
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      input.addEventListener("input", clearMessages);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Blueprint do Render para o backend (Docker). Crie um "Blueprint" no Render apontando para este repositório.
+services:
+  - type: web
+    name: instagram-downloader-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      # Coloque aqui a URL do seu site no Netlify (sem barra no final).
+      - key: ALLOWED_ORIGINS
+        value: https://SEU-SITE.netlify.app
