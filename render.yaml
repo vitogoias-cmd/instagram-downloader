@@ -8,4 +8,4 @@ services:
     envVars:
       # Coloque aqui a URL do seu site no Netlify (sem barra no final).
       - key: ALLOWED_ORIGINS
-        value: https://SEU-SITE.netlify.app
+        value: https://victordownloader.netlify.app
