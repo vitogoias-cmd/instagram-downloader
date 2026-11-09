@@ -1,6 +1,9 @@
 # Backend: FastAPI + yt-dlp + ffmpeg (ffmpeg é necessário para mesclar áudio e vídeo)
 FROM python:3.12-slim
 
+# deno: runtime de JavaScript que o yt-dlp usa por padrão para extrair vídeos do YouTube
+COPY --from=denoland/deno:bin /deno /usr/local/bin/deno
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*

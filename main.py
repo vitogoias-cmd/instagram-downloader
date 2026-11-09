@@ -241,8 +241,13 @@ def _map_ytdlp_error(exc: Exception) -> HTTPException:
             status_code=404,
             detail="Conteúdo não encontrado ou privado. Verifique se o link está correto e se o perfil é público.",
         )
+    if "player response" in lowered:
+        return HTTPException(
+            status_code=503,
+            detail="O YouTube não liberou os dados deste vídeo para este servidor. Tente novamente mais tarde.",
+        )
     logger.exception("Erro não tratado do yt-dlp")
-    return HTTPException(status_code=500, detail=f"Falha ao processar o link no Instagram: {msg[:300]}")
+    return HTTPException(status_code=500, detail=f"Falha ao processar o link: {msg[:300]}")
 
 
 # ---------------------------------------------------------------------------
