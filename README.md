@@ -95,6 +95,10 @@ O proxy só aceita URLs HTTPS de domínios do Instagram/Meta (`cdninstagram.com`
 - O YouTube bloqueia com frequência IPs de datacenter e pode pedir verificação anti-bot (HTTP 429). Nesse caso, tente de novo mais tarde ou rode o app em outra máquina.
 - Baixar vídeos do YouTube sem autorização viola os Termos de Serviço da plataforma. Use apenas para vídeos que você tem direito de baixar, como os seus próprios ou os de licença livre.
 
+## Versão
+
+A versão aparece discretamente no rodapé da página (`static/index.html`, elemento `.app-version`). A cada mudança enviada, incremente o número: `v1.0.1` → `v1.0.2` para correções, `v1.1.0` para novas funções.
+
 ## Produção
 
 `allow_origins=["*"]` no CORS está liberado para desenvolvimento local. Em produção, restrinja aos domínios do seu frontend e coloque a aplicação atrás de um proxy reverso (Nginx, Caddy) com HTTPS.

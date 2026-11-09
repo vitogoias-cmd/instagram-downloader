@@ -254,6 +254,19 @@
       margin-top: 12px;
     }
 
+    .app-version {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 8px;
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      opacity: 0.6;
+      pointer-events: none;
+      user-select: none;
+    }
+
     @media (max-width: 420px) {
       .card { padding: 22px 18px; }
       form { flex-direction: column; }
@@ -299,6 +312,8 @@
       <p class="hint">O download começa pelo servidor; pode levar alguns segundos.</p>
     </section>
   </main>
+
+  <footer class="app-version" aria-label="Versão do aplicativo">v1.0.1</footer>
 
   <script>
     (() => {
