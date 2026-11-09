@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Baixar vídeos do Instagram</title>
+  <title>Baixar vídeos do Instagram e YouTube</title>
   <meta name="description" content="Cole o link de um Reel ou post do Instagram e baixe o vídeo em MP4." />
   <!-- URL do backend. Vazio = mesmo servidor que serve esta página. Em produção (Netlify), coloque a URL do backend. -->
   <meta name="api-base" content="https://instagram-downloader-api-y2v9.onrender.com" />
@@ -265,15 +265,15 @@
   <main class="card" id="card">
     <div class="brand">
       <div class="brand-icon" aria-hidden="true">IG</div>
-      <h1>Baixar vídeo do Instagram</h1>
+      <h1>Baixar vídeo</h1>
     </div>
-    <p class="subtitle">Cole o link de um Reel ou post com vídeo e baixe o arquivo em MP4.</p>
+    <p class="subtitle">Cole o link de um Reel, post do Instagram ou vídeo do YouTube e baixe o arquivo em MP4.</p>
 
     <form id="form" autocomplete="off">
       <input
         id="url"
         type="url"
-        placeholder="https://www.instagram.com/reel/..."
+        placeholder="Cole o link do Instagram ou do YouTube"
         required
         aria-label="Link do Instagram"
       />
@@ -372,7 +372,7 @@
 
         const audioWarning = document.getElementById("audio-warning");
         audioWarning.textContent = data.has_audio === false
-          ? "Atenção: o Instagram não ofereceu uma trilha de áudio para este vídeo. O arquivo será baixado sem som."
+          ? "Atenção: a fonte não ofereceu uma trilha de áudio para este vídeo. O arquivo será baixado sem som."
           : "";
         audioWarning.classList.toggle("show", data.has_audio === false);
 
@@ -395,7 +395,7 @@
 
         const url = input.value.trim();
         if (!url) {
-          showError("Cole um link do Instagram para continuar.");
+          showError("Cole um link do Instagram ou do YouTube para continuar.");
           return;
         }
 

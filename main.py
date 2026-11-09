@@ -34,13 +34,20 @@ STATIC_DIR = BASE_DIR / "static"
 
 INSTAGRAM_DOMAIN = "instagram.com"
 # Hosts de CDN do Instagram/Meta aceitos pelo proxy (evita uso como open proxy / SSRF).
-ALLOWED_CDN_SUFFIXES = ("cdninstagram.com", "fbcdn.net", "instagram.com")
+YOUTUBE_DOMAINS = ("youtube.com", "youtu.be")
+# CDNs aceitos pelo proxy (evita uso como open proxy / SSRF): Instagram/Meta e vídeos do YouTube (googlevideo).
+ALLOWED_CDN_SUFFIXES = ("cdninstagram.com", "fbcdn.net", "instagram.com", "googlevideo.com")
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
-CDN_HEADERS = {"User-Agent": USER_AGENT, "Referer": "https://www.instagram.com/"}
+
+
+def _cdn_headers(url: str) -> dict[str, str]:
+    host = (urlparse(url).hostname or "").lower()
+    referer = "https://www.youtube.com/" if host.endswith("googlevideo.com") else "https://www.instagram.com/"
+    return {"User-Agent": USER_AGENT, "Referer": referer}
 
 logger = logging.getLogger("instagram-downloader")
 logging.basicConfig(level=logging.INFO)
@@ -91,6 +98,17 @@ def _is_instagram_url(url: str) -> bool:
     return host == INSTAGRAM_DOMAIN or host.endswith("." + INSTAGRAM_DOMAIN)
 
 
+def _is_youtube_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url.strip())
+    except ValueError:
+        return False
+    if parsed.scheme not in ("http", "https"):
+        return False
+    host = (parsed.hostname or "").lower()
+    return any(host == d or host.endswith("." + d) for d in YOUTUBE_DOMAINS)
+
+
 def _is_allowed_cdn_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
@@ -118,7 +136,8 @@ def _extract_info_sync(url: str) -> dict[str, Any]:
         "skip_download": True,      # inspeciona metadados sem gravar no disco
         "quiet": True,
         "no_warnings": True,
-        "noplaylist": False,        # carrosséis chegam como playlist
+        # YouTube: só o vídeo da URL (ignora playlist). Instagram: carrosséis chegam como playlist.
+        "noplaylist": _is_youtube_url(url),
         "logger": logging.getLogger("yt-dlp"),
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -165,7 +184,11 @@ def _select_streams(entry: dict[str, Any]) -> tuple[str, Optional[str], bool]:
         A mesclagem acontece no servidor, com ffmpeg.
       - Se não há áudio em lugar nenhum, tem_audio = False.
     """
-    formats = [f for f in (entry.get("formats") or []) if f.get("url")]
+    # Só formatos HTTP(S) diretos: HLS (m3u8) e DASH entregam playlists/fragmentos, não o arquivo.
+    formats = [
+        f for f in (entry.get("formats") or [])
+        if f.get("url") and (f.get("protocol") or "").lower() in ("http", "https")
+    ]
     video_formats = [f for f in formats if f.get("vcodec") not in (None, "none")]
     audio_formats = [f for f in formats if f.get("acodec") not in (None, "none")
                      and f.get("vcodec") in (None, "none")]
@@ -201,6 +224,11 @@ def _map_ytdlp_error(exc: Exception) -> HTTPException:
     msg = str(exc)
     lowered = msg.lower()
 
+    if "sign in to confirm" in lowered or "not a bot" in lowered:
+        return HTTPException(
+            status_code=429,
+            detail="O YouTube pediu verificação anti-bot para este servidor. Tente novamente mais tarde.",
+        )
     if any(k in lowered for k in ("rate-limit", "rate limit", "too many requests", "429")):
         return HTTPException(
             status_code=429,
@@ -221,7 +249,7 @@ def _map_ytdlp_error(exc: Exception) -> HTTPException:
 # Download e mesclagem
 # ---------------------------------------------------------------------------
 async def _save_stream(client: httpx.AsyncClient, url: str, path: Path) -> None:
-    async with client.stream("GET", url, headers=CDN_HEADERS) as resp:
+    async with client.stream("GET", url, headers=_cdn_headers(url)) as resp:
         if resp.status_code >= 400:
             raise HTTPException(status_code=404, detail="O link de mídia expirou. Analise o post novamente.")
         with path.open("wb") as fh:
@@ -288,8 +316,8 @@ async def index() -> FileResponse:
 @app.post("/api/info", response_model=InfoResponse)
 async def get_info(payload: InfoRequest) -> InfoResponse:
     url = payload.url.strip()
-    if not _is_instagram_url(url):
-        raise HTTPException(status_code=400, detail="URL inválida. Informe um link de instagram.com.")
+    if not (_is_instagram_url(url) or _is_youtube_url(url)):
+        raise HTTPException(status_code=400, detail="URL inválida. Informe um link do Instagram ou do YouTube.")
 
     try:
         info = await asyncio.to_thread(_extract_info_sync, url)
@@ -335,7 +363,7 @@ async def download(
         follow_redirects=True,
     )
     try:
-        request = client.build_request("GET", url, headers=CDN_HEADERS)
+        request = client.build_request("GET", url, headers=_cdn_headers(url))
         upstream = await client.send(request, stream=True)
     except httpx.HTTPError as exc:
         await client.aclose()

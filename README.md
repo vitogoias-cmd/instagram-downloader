@@ -1,6 +1,6 @@
 # Instagram Video Downloader
 
-Aplicação web para baixar vídeos de **Reels** e **posts com vídeo** do Instagram.
+Aplicação web para baixar vídeos de **Reels** e **posts com vídeo** do Instagram, e de **vídeos do YouTube**.
 Backend em **FastAPI** usando **yt-dlp** para extrair os metadados; frontend em HTML/CSS/JS puro, servido pelo próprio FastAPI.
 
 ## Estrutura
@@ -87,6 +87,13 @@ O proxy só aceita URLs HTTPS de domínios do Instagram/Meta (`cdninstagram.com`
   ```
 - **Autenticação (opcional):** para casos específicos, o yt-dlp aceita cookies de sessão (`cookiefile`/`cookiesfrombrowser`) em `_extract_info_sync` no `main.py`. Use apenas com a sua própria conta e sob as regras do Instagram.
 - **Uso responsável:** baixe apenas conteúdo que você tem direito de usar. Os Termos de Uso do Instagram e os direitos autorais dos criadores continuam valendo.
+
+## YouTube
+
+- Aceita links `youtube.com/watch?v=...` e `youtu.be/...`. Playlists são ignoradas: só o vídeo da URL é baixado.
+- Vídeos até 720p costumam vir com áudio junto. Resoluções maiores vêm com áudio separado, e o ffmpeg faz a mesclagem.
+- O YouTube bloqueia com frequência IPs de datacenter e pode pedir verificação anti-bot (HTTP 429). Nesse caso, tente de novo mais tarde ou rode o app em outra máquina.
+- Baixar vídeos do YouTube sem autorização viola os Termos de Serviço da plataforma. Use apenas para vídeos que você tem direito de baixar, como os seus próprios ou os de licença livre.
 
 ## Produção
 
